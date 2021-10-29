@@ -21,7 +21,7 @@ public class WhereAreYouApplication {
     @GetMapping("/test")
     public void test(@RequestParam(name = "searchQuery") String searchQuery) throws Exception {
         //testcommit
-        DBLP i = new DBLP();
+        Index i = new Index();
         DeleteIndex();
         long startTime = System.currentTimeMillis();
         System.out.println("Started at: " + LocalDateTime.now());
