@@ -40,7 +40,9 @@ public class DBLP extends DefaultHandler {
             doc.add(new TextField("docId", Integer.toString(++counter),Field.Store.YES));
             doc.add(new TextField(parentQName, qName, Field.Store.YES));
         }
-        elementBuffer.setLength(0);
+        if(!Constants.metaTags.contains(qName)){
+            elementBuffer.setLength(0);
+        }
         for (int i = 0; i < atts.getLength(); i++) {
             String key = parentQName + "." + atts.getQName(i);
             String value = "";

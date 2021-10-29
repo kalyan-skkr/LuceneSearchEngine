@@ -11,6 +11,7 @@ public class Constants {
     //public static final String DblpFile = "/Users/kalyansabbella/Documents/UoW/Term 1/IR/Project/Resources/dblp.xml";
     public static final List<String> entryTypes = Arrays.stream(new String[]{"article", "inproceedings", "proceedings", "book",
             "incollection", "phdthesis", "mastersthesis", "www"}).toList();
+    public static final List<String> metaTags = Arrays.stream(new String[]{"ref","sup","sub","i","tt"}).toList();
 
 
 }
