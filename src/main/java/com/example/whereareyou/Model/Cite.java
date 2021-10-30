@@ -1,6 +1,11 @@
 package com.example.whereareyou.Model;
 
 public class Cite {
+    public Cite(String value, String label) {
+        this.value = value;
+        this.label = label;
+    }
+
     private String value;
 
     public String getValue() {

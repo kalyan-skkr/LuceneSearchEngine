@@ -1,6 +1,13 @@
 package com.example.whereareyou.Model;
 
 public class Author {
+    public Author(String value, String orcid, String bibTex, String aux) {
+        this.value = value;
+        this.orcid = orcid;
+        this.bibTex = bibTex;
+        this.aux = aux;
+    }
+
     private String value;
     private String orcid;
     private String bibTex;

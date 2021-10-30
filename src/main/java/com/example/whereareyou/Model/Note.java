@@ -1,6 +1,12 @@
 package com.example.whereareyou.Model;
 
 public class Note {
+    public Note(String value, String type, String label) {
+        this.value = value;
+        this.type = type;
+        this.label = label;
+    }
+
     private String value;
 
     public String getValue() {

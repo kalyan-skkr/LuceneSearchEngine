@@ -1,6 +1,11 @@
 package com.example.whereareyou.Model;
 
 public class Publisher {
+    public Publisher(String value, String href) {
+        this.value = value;
+        this.href = href;
+    }
+
     private String value;
 
     public String getValue() {
