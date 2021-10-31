@@ -3,6 +3,47 @@ package com.example.whereareyou.Model;
 import java.util.List;
 
 public class DblpRecord {
+    public DblpRecord() {
+    }
+
+    public DblpRecord(int id, float score, Entry entry,
+                      Title title, List<Author> author,
+                      String year, String school,
+                      Publisher publisher, String number,
+                      String pages, ISBN isbn, EE ee,
+                      String month, Series series,
+                      String volume, List<Note> notes,
+                      String bookTitle, String crossRef,
+                      Url url, Editor editor, Cite cite,
+                      String cdRom, String address,
+                      String chapter, String publnr) {
+        this.id = id;
+        this.score = score;
+        this.entry = entry;
+        this.title = title;
+        this.author = author;
+        this.year = year;
+        this.school = school;
+        this.publisher = publisher;
+        this.number = number;
+        this.pages = pages;
+        this.isbn = isbn;
+        this.ee = ee;
+        this.month = month;
+        this.series = series;
+        this.volume = volume;
+        this.note = notes;
+        this.bookTitle = bookTitle;
+        this.crossRef = crossRef;
+        this.url = url;
+        this.editor = editor;
+        this.cite = cite;
+        this.cdRom = cdRom;
+        this.address = address;
+        this.chapter = chapter;
+        this.publnr = publnr;
+    }
+
     private int id;
 
     public int getId() {
@@ -11,6 +52,16 @@ public class DblpRecord {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    private float score;
+
+    public float getScore() {
+        return score;
+    }
+
+    public void setScore(float score) {
+        this.score = score;
     }
 
     private Entry entry;
@@ -32,14 +83,14 @@ public class DblpRecord {
         this.title = title;
     }
 
-    private List<Author> authorList;
+    private List<Author> author;
 
-    public List<Author> getAuthorList() {
-        return authorList;
+    public List<Author> getAuthor() {
+        return author;
     }
 
-    public void setAuthorList(List<Author> authorList) {
-        this.authorList = authorList;
+    public void setAuthor(List<Author> author) {
+        this.author = author;
     }
 
     private String year;
@@ -132,14 +183,14 @@ public class DblpRecord {
     public void setVolume(String volume) {
         this.volume = volume;
     }
-    private List<Note> notes;
+    private List<Note> note;
 
-    public List<Note> getNotes() {
-        return notes;
+    public List<Note> getNote() {
+        return note;
     }
 
-    public void setNotes(List<Note> notes) {
-        this.notes = notes;
+    public void setNote(List<Note> note) {
+        this.note = note;
     }
     private String bookTitle;
 

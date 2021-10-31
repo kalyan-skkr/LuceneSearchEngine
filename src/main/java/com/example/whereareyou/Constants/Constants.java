@@ -13,5 +13,10 @@ public class Constants {
             "incollection", "phdthesis", "mastersthesis", "www"}).toList();
     public static final List<String> metaTags = Arrays.stream(new String[]{"ref","sup","sub","i","tt"}).toList();
 
+    public static final List<String> authorAtts = Arrays.stream(new String[]{"bibtex","orcid","aux"}).toList();
+    public static final List<String> noteAtts = Arrays.stream(new String[]{"type","label"}).toList();
+    public static final String NaN = "NaN";
+    public static final String delimitter = " ;; ";
+
 
 }
