@@ -1,6 +1,11 @@
 package com.example.whereareyou.Model;
 
 public class Url {
+    public Url(String value, String type) {
+        this.value = value;
+        this.type = type;
+    }
+
     private String value;
 
     public String getValue() {

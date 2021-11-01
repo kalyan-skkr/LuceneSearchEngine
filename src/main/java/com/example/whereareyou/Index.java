@@ -10,6 +10,7 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.tomcat.util.bcel.Const;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
@@ -19,6 +20,9 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.io.*;
 import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class Index extends DefaultHandler {
     static IndexWriter writer;
@@ -34,37 +38,29 @@ public class Index extends DefaultHandler {
         String parentQName = qName;
         if(Constants.entryTypes.contains(qName)){
             doc = new Document();
-            parentQName = "entryType";
+            parentQName = "entry";
             doc.add(new TextField("docId", Integer.toString(++counter),Field.Store.YES));
             doc.add(new TextField(parentQName, qName, Field.Store.YES));
         }
         if(!Constants.metaTags.contains(qName)){
             elementBuffer.setLength(0);
         }
-        for (int i = 0; i < atts.getLength(); i++) {
-            String key = parentQName + "." + atts.getQName(i);
-            String value = "";
-            if(doc.get(key)!=null){
-                value = doc.get(key) + ";;" + atts.getValue(i);
-                doc.removeField(key);
+        if(qName.equals("author") || qName.equals("note")){
+            MissingAtts(atts, qName, qName.equals("author") ? Constants.authorAtts : Constants.noteAtts);
+        }
+        else{
+            if(atts.getLength() > 0){
+                for (int i = 0; i < atts.getLength(); i++) {
+                    String key = parentQName + "." + atts.getQName(i);
+                    doc.add(new TextField(key, atts.getValue(i), Field.Store.YES));
+                }
             }
-            else{
-                value = atts.getValue(i);
-            }
-            doc.add(new TextField(key, value, Field.Store.YES));
         }
     }
 
     public void endElement(String uri, String localName, String qName) throws SAXException {
         if(!Constants.entryTypes.contains(qName) && !qName.equals("dblp")){
-            String value = "";
-            if(doc.get(qName) != null){
-                value = doc.get(qName) + ";;" + elementBuffer.toString();
-                doc.removeField(qName);
-            }
-            else{
-                value = elementBuffer.toString();
-            }
+            String value = elementBuffer.toString();
             doc.add(new TextField(qName, value, Field.Store.YES));
         }
 
@@ -96,5 +92,21 @@ public class Index extends DefaultHandler {
 
         writer.close();
 
+    }
+    private void MissingAtts(Attributes atts, String qName, List<String> reqAtts){
+        List<String> currentAtts = new ArrayList<String>();
+        for(int i = 0; i<atts.getLength(); i++){
+            String key = qName + "." + atts.getQName(i);
+            doc.add(new TextField(key,atts.getValue(i),Field.Store.YES));
+
+            currentAtts.add(atts.getQName(i));
+        }
+
+        for(int i = 0; i < reqAtts.size(); i++){
+            if(!currentAtts.contains(reqAtts.get(i))){
+                String key = qName + "." + reqAtts.get(i);
+                doc.add(new TextField(key,Constants.NaN,Field.Store.YES));
+            }
+        }
     }
 }

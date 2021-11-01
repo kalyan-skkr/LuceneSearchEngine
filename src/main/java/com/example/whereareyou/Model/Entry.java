@@ -1,6 +1,15 @@
 package com.example.whereareyou.Model;
 
 public class Entry {
+
+    public Entry(String value, String mdate, String key, String publType, String cdate){
+        this.value = value;
+        this.mdate = mdate;
+        this.key = key;
+        this.publType = publType;
+        this.cdate = cdate;
+    }
+
     private String value;
     private String mdate;
     private String key;

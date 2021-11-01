@@ -1,6 +1,11 @@
 package com.example.whereareyou.Model;
 
 public class Title {
+    public Title(String value, String bibTex){
+        this.value = value;
+        this.bibTex = bibTex;
+    }
+
     private String value;
 
     public String getValue() {
