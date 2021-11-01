@@ -16,7 +16,6 @@ public class Constants {
     public static final List<String> authorAtts = Arrays.stream(new String[]{"bibtex","orcid","aux"}).toList();
     public static final List<String> noteAtts = Arrays.stream(new String[]{"type","label"}).toList();
     public static final String NaN = "NaN";
-    public static final String delimitter = " ;; ";
 
 
 }

@@ -114,7 +114,4 @@ public class Search {
 
         return noteList;
     }
-    private List<String> GetArrayList(Document doc, String key){
-        return new ArrayList<String>(Arrays.asList(doc.get(key).split(Constants.delimitter)));
-    }
 }
