@@ -37,23 +37,23 @@ public class WhereAreYouApplication {
             @RequestParam(name = "searchQuery") String searchQuery,
             @RequestParam(name = "field") String field) throws Exception {
         Index i = new Index();
-        DeleteIndex();
+        DeleteIndex(Constants.IndexDir);
         i.IndexFiles();
 
         Search s = new Search();
         DblpRecordList records = s.SearchFile(searchQuery, field);
         return ResponseEntity.ok(records);
     }
-    private void DeleteIndex(){
-        File dir = new File(Constants.IndexDir);
+    private void DeleteIndex(String dirPath){
+        File dir = new File(dirPath);
         String[] files = dir.list();
         for(String s : files) {
             File curfile = new File(dir.getPath(),s);
             curfile.delete();
         }
     }
-    @GetMapping("/autocomplete")
-    public ResponseEntity<AutoComplete> AutoCompleteSuggestions(@RequestParam(name="query") String query) throws IOException {
+    @GetMapping("/spellcheck")
+    public ResponseEntity<AutoComplete> SpellCheck(@RequestParam(name="query") String query) throws IOException {
         // Creating the index
         String input_word = query;
         Directory directory = FSDirectory.open(Paths.get("/Users/kalyansabbella/Documents/Test/SpellIndex"));
@@ -64,14 +64,29 @@ public class WhereAreYouApplication {
         directory.close();
 
         //checker.setStringDistance(new JaroWinklerDistance());
-        checker.setStringDistance(new LevenshteinDistance());
-        //checker.setStringDistance(new LuceneLevenshteinDistance());
+        //checker.setStringDistance(new LevenshteinDistance());
+        checker.setStringDistance(new LuceneLevenshteinDistance());
         //checker.setStringDistance(new NGramDistance());
 
         String[] suggestions = checker.suggestSimilar(input_word, 5);
 
         AutoComplete ac = new AutoComplete(new ArrayList<String>(Arrays.asList(suggestions)));
         return ResponseEntity.ok(ac);
+    }
+
+    @GetMapping("/suggest")
+    public ResponseEntity<List<String>> Suggest(@RequestParam(name="query") String query) throws Exception {
+        Suggest ac = new Suggest();
+        DeleteIndex(Constants.AcIndexDir);
+        List<String> res = ac.suggestTerms(query);
+
+        return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/wordtovec")
+    public void Word2VecTest() throws Exception {
+        IrisClassification i = new IrisClassification();
+        i.loadData();
     }
 
 }
