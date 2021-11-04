@@ -27,7 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 
 public class Search {
-    public DblpRecordList SearchFile(String searchQuery, String field) throws Exception {
+    public List<DblpRecord> SearchFile(String searchQuery, String field) throws Exception {
         String[] field1 = {"title","author","month"};
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(Constants.IndexDir)));
         IndexSearcher searcher = new IndexSearcher(reader);
@@ -50,8 +50,7 @@ public class Search {
         List<DblpRecord> recordList = GetRecords(results, searcher);
         reader.close();
         int totalHits = Integer.parseInt(Arrays.stream(results.totalHits.toString().split(" ")).toList().get(0));
-        DblpRecordList result = new DblpRecordList(totalHits, recordList.size(), recordList);
-        return result;
+        return recordList;
     }
     private List<DblpRecord> GetRecords(TopDocs results, IndexSearcher searcher) throws IOException {
         List<DblpRecord> recordList = new ArrayList<DblpRecord>();
