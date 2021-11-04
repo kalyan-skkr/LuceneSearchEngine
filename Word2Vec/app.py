@@ -7,7 +7,7 @@ import urllib.request
 import re
 import nltk
 import lxml
-from gensim.models import Word2Vec
+from gensim.models import Word2Vec, KeyedVectors
 
 app = Flask(__name__)
 
@@ -17,14 +17,11 @@ class Words:
         self.key = key
         self.score = score
 
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__,
-                          sort_keys=True, indent=4)
-
 
 @app.route('/word2vec', methods=['GET'])
-def main():  # put application's code here
-    # CreateModel
+def main():
+    # create_model()
+    word2vec = fetch_model()
     # FindSimilarWords
 
     if 'query' in request.args:
@@ -32,18 +29,32 @@ def main():  # put application's code here
     else:
         return jsonify([])
 
-    scrapped_data = urllib.request.urlopen('https://en.wikipedia.org/wiki/Artificial_intelligence')
-    content = scrapped_data.read()
+    try:
+        v1 = word2vec.most_similar(query)
+    except Exception:
+        return jsonify([])
 
-    # with open("/Users/kalyansabbella/Documents/Test/Doc/dblp.xml", "r") as file:
-    #     # Read each line in the file, readlines() returns a list of lines
-    #     content = file.readlines()
-    #     # Combine the lines in the list into a string
-    #     content = " ".join(content)
+    v2 = []
+    for x in v1:
+        word = Words(x[0], x[1])
+        v2.append(word)
+
+    return jsonpickle.encode(v2)
+
+
+def create_model():
+    # scrapped_data = urllib.request.urlopen('https://en.wikipedia.org/wiki/Artificial_intelligence')
+    # content = scrapped_data.read()
+    with open("/Users/kalyansabbella/Documents/Test/Doc/dblp.xml", "r") as file:
+        # Read each line in the file, readlines() returns a list of lines
+        content = file.readlines()
+        # Combine the lines in the list into a string
+        content = " ".join(content)
 
     parsed_article = bs.BeautifulSoup(content, 'lxml')
 
-    paragraphs = parsed_article.find_all('p')
+    # paragraphs = parsed_article.find_all('p')
+    paragraphs = parsed_article.find_all('title')
 
     article_text = ""
 
@@ -66,17 +77,12 @@ def main():  # put application's code here
         all_words[i] = [w for w in all_words[i] if w not in stopwords.words('english')]
 
     word2vec = Word2Vec(all_words, min_count=2)
-    try:
-        v1 = word2vec.wv.most_similar(query)
-    except Exception:
-        return jsonify([])
+    word2vec.wv.save_word2vec_format("/Users/kalyansabbella/Documents/Test/w2c/w2v_model.bin", binary=True)
+    # return word2vec
 
-    v2 = []
-    for x in v1:
-        word = Words(x[0], x[1])
-        v2.append(word)
-    # word2vec.wv.save_word2vec_format("/Users/kalyansabbella/Documents/Test/w2c/w2v_model.bin", binary=True)
-    return jsonpickle.encode(v2)
+
+def fetch_model():
+    return KeyedVectors.load_word2vec_format("/Users/kalyansabbella/Documents/Test/w2c/w2v_model.bin", binary=True)
 
 
 if __name__ == '__main__':
