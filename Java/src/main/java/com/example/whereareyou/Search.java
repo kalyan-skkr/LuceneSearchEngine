@@ -8,7 +8,9 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.queryparser.complexPhrase.ComplexPhraseQueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TopDocs;
@@ -25,19 +27,30 @@ import java.util.Iterator;
 import java.util.List;
 
 public class Search {
-    public DblpRecordList SearchFile(String searchQuery, String field) throws Exception {
+    public List<DblpRecord> SearchFile(String searchQuery, String field) throws Exception {
+        String[] field1 = {"title","author","month"};
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(Constants.IndexDir)));
         IndexSearcher searcher = new IndexSearcher(reader);
         Analyzer analyzer = new StandardAnalyzer();
-        QueryParser parser = new QueryParser(field, analyzer);
+        QueryParser parser = null;
+        String[] searchQSplit = searchQuery.split(" ");
+        if(searchQSplit.length == 1){
+            searchQuery = searchQuery + "~";
+        }
+        if(field.equals("")){
+            //parser = new ComplexPhraseQueryParser(field, analyzer);
+            parser = new MultiFieldQueryParser(field1, analyzer);
+        }
+        else{
+            parser = new ComplexPhraseQueryParser(field, analyzer);
+        }
         Query query = parser.parse(searchQuery);
         int count = 5;
         TopDocs results = searcher.search(query,count);
         List<DblpRecord> recordList = GetRecords(results, searcher);
         reader.close();
         int totalHits = Integer.parseInt(Arrays.stream(results.totalHits.toString().split(" ")).toList().get(0));
-        DblpRecordList result = new DblpRecordList(totalHits, recordList.size(), recordList);
-        return result;
+        return recordList;
     }
     private List<DblpRecord> GetRecords(TopDocs results, IndexSearcher searcher) throws IOException {
         List<DblpRecord> recordList = new ArrayList<DblpRecord>();
