@@ -33,13 +33,14 @@ public class Search {
         IndexSearcher searcher = new IndexSearcher(reader);
         Analyzer analyzer = new StandardAnalyzer();
         QueryParser parser = null;
-        String[] searchQSplit = searchQuery.split(" ");
-        if(searchQSplit.length == 1){
-            searchQuery = searchQuery + "~";
-        }
         if(field.equals("")){
-            //parser = new ComplexPhraseQueryParser(field, analyzer);
-            parser = new MultiFieldQueryParser(field1, analyzer);
+            if(!searchQuery.contains("~")){
+                field = "title";
+                parser = new ComplexPhraseQueryParser(field, analyzer);
+            }
+            else{
+                parser = new MultiFieldQueryParser(field1, analyzer);
+            }
         }
         else{
             parser = new ComplexPhraseQueryParser(field, analyzer);

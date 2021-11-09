@@ -18,5 +18,8 @@ public class Constants {
     public static final List<String> noteAtts = Arrays.stream(new String[]{"type","label"}).toList();
     public static final String NaN = "NaN";
 
+    public static final String dictionaryFile = "/Users/kalyansabbella/Documents/Test/words_alpha.txt";
+    public static final String spellIndexDir = "/Users/kalyansabbella/Documents/Test/SpellIndex";
+
 
 }
