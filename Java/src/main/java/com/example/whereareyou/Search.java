@@ -27,32 +27,30 @@ import java.util.Iterator;
 import java.util.List;
 
 public class Search {
-    public List<DblpRecord> SearchFile(String searchQuery, String field) throws Exception {
-        String[] field1 = {"title","author","month"};
+    public List<DblpRecord> SearchFile(String searchQuery, String field, boolean flag_fuzzy, boolean flag_proximity, int count) throws Exception {
+        //String[] field1 = {"title","author","month"};
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(Constants.IndexDir)));
         IndexSearcher searcher = new IndexSearcher(reader);
         Analyzer analyzer = new StandardAnalyzer();
         QueryParser parser = null;
-        if(field.equals("")){
-            if(!searchQuery.contains("~")){
-                field = "title";
-                parser = new ComplexPhraseQueryParser(field, analyzer);
-            }
-            else{
-                parser = new MultiFieldQueryParser(field1, analyzer);
-            }
+        Query query = null;
+        TopDocs results = null;
+        List<DblpRecord> recordList = new ArrayList<>();
+
+        if(flag_fuzzy && !searchQuery.contains("~")){
+            searchQuery += "~";
         }
-        else{
-            parser = new ComplexPhraseQueryParser(field, analyzer);
+        else if(flag_proximity && !searchQuery.contains("~")){
+            searchQuery += "~4";
         }
-        Query query = parser.parse(searchQuery);
-        int count = 5;
-        TopDocs results = searcher.search(query,count);
-        List<DblpRecord> recordList = GetRecords(results, searcher);
+        parser = new ComplexPhraseQueryParser(field, analyzer);
+        query = parser.parse(searchQuery);
+        results = searcher.search(query,count);
+        recordList.addAll(GetRecords(results,searcher));
         reader.close();
-        int totalHits = Integer.parseInt(Arrays.stream(results.totalHits.toString().split(" ")).toList().get(0));
         return recordList;
     }
+
     private List<DblpRecord> GetRecords(TopDocs results, IndexSearcher searcher) throws IOException {
         List<DblpRecord> recordList = new ArrayList<DblpRecord>();
         for(int i = 0; i < results.scoreDocs.length; i++){

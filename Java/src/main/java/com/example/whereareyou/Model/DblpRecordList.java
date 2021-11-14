@@ -3,10 +3,11 @@ package com.example.whereareyou.Model;
 import java.util.List;
 
 public class DblpRecordList {
-    public DblpRecordList(int totalHits, int count, List<DblpRecord> items) {
+    public DblpRecordList(int totalHits, int count, List<DblpRecord> items, String errorMessage) {
         this.totalHits = totalHits;
         this.count = count;
         this.items = items;
+        this.errorMessage = errorMessage;
     }
 
     private int totalHits;
@@ -36,5 +37,15 @@ public class DblpRecordList {
 
     public void setItems(List<DblpRecord> items) {
         this.items = items;
+    }
+
+    private String errorMessage;
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
     }
 }

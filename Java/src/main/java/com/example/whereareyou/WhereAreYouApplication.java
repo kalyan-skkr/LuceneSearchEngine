@@ -14,6 +14,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,20 +37,37 @@ public class WhereAreYouApplication {
     @GetMapping("/getrecords")
     public ResponseEntity<DblpRecordList> GetRecords(
             @RequestParam(name = "searchQuery") String searchQuery,
-            @RequestParam(name = "field", defaultValue = "") String field,
-            @RequestParam(name = "word2vec", defaultValue = "false") boolean flag_word2vec) throws Exception {
+            @RequestParam(name = "field", defaultValue = "title") String field,
+            @RequestParam(name = "count", defaultValue = "5") int count,
+            @RequestParam(name = "word2vec", defaultValue = "false") boolean flag_word2vec,
+            @RequestParam(name = "fuzzy", defaultValue = "false") boolean flag_fuzzy,
+            @RequestParam(name = "proximity", defaultValue = "false") boolean flag_proximity
+    ) throws Exception {
+        String[] terms = searchQuery.split(" ");
+        if(flag_proximity){
+            if(terms.length == 1){
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new DblpRecordList(0,0,null,"Proximity cannot be applied for only one term"));
+            }
+        }
+        if(flag_fuzzy){
+            if(terms.length <= 1){
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new DblpRecordList(0,0,null,"Fuzziness cannot be applied to phrases"));
+            }
+        }
 
-        searchQuery = SpellChecker(searchQuery);
+        if(terms.length == 1){
+            searchQuery = SpellChecker(searchQuery);
+        }
 
         Index i = new Index();
         //DeleteIndex(Constants.IndexDir);
         //i.IndexFiles();
 
         Search s = new Search();
-        List<DblpRecord> records = s.SearchFile(searchQuery, field);
+        List<DblpRecord> records = s.SearchFile(searchQuery, field, flag_fuzzy, flag_proximity, count);
 
         if(flag_word2vec){
-            records = AddWord2VecRecords(searchQuery, field, records);
+            records = AddWord2VecRecords(searchQuery, field, records, count);
         }
 
         Map<Integer, DblpRecord> mapList = new HashMap<Integer, DblpRecord>();
@@ -61,11 +79,15 @@ public class WhereAreYouApplication {
 
         records = RemoveDuplicates(records);
 
-        DblpRecordList resultSet = new DblpRecordList(0, records.size(), records);
+        if(records.size() <= 0){
+            return ResponseEntity.ok().body(new DblpRecordList(0,0,null, "No Records Found"));
+        }
+
+        DblpRecordList resultSet = new DblpRecordList(0, records.size(), records, "");
 
         return ResponseEntity.ok(resultSet);
     }
-    private List<DblpRecord> AddWord2VecRecords(String searchQuery, String field, List<DblpRecord> records) throws Exception {
+    private List<DblpRecord> AddWord2VecRecords(String searchQuery, String field, List<DblpRecord> records, int count) throws Exception {
         RestTemplate restTemplate = new RestTemplate();
         Search s = new Search();
 
@@ -74,7 +96,7 @@ public class WhereAreYouApplication {
             List<Word2Vec> word2Vec = new Gson().fromJson(call.getBody(), new TypeToken<List<Word2Vec>>(){}.getType());
             if(word2Vec.size() > 0){
                 for(Word2Vec w : word2Vec){
-                    records.addAll(s.SearchFile(w.getKey(),field));
+                    records.addAll(s.SearchFile(w.getKey(),field, false, false, count));
                 }
             }
         }
@@ -119,34 +141,15 @@ public class WhereAreYouApplication {
         }
         return mapList.values().stream().toList();
     }
-    @GetMapping("/spellcheck")
-    public ResponseEntity<AutoComplete> SpellCheck(@RequestParam(name="query") String query) throws IOException {
-        // Creating the index
-        String input_word = query;
-        Directory directory = FSDirectory.open(Paths.get(Constants.spellIndexDir));
-        PlainTextDictionary txt_dict = new PlainTextDictionary(Paths.get(Constants.dictionaryFile));
-        SpellChecker checker = new SpellChecker(directory);
-
-        //checker.indexDictionary(txt_dict, new IndexWriterConfig(new KeywordAnalyzer()), false);
-        directory.close();
-
-        //checker.setStringDistance(new JaroWinklerDistance());
-        //checker.setStringDistance(new LevenshteinDistance());
-        //checker.setStringDistance(new LuceneLevenshteinDistance());
-        checker.setStringDistance(new NGramDistance());
-
-        String[] suggestions = checker.suggestSimilar(input_word, 10);
-
-        AutoComplete ac = new AutoComplete(new ArrayList<String>(Arrays.asList(suggestions)));
-        return ResponseEntity.ok(ac);
-    }
 
     @GetMapping("/suggest")
     public ResponseEntity<List<String>> Suggest(@RequestParam(name="query") String query) throws Exception {
-        Suggest ac = new Suggest();
-        //DeleteIndex(Constants.AcIndexDir);
-        List<String> res = ac.suggestTerms(query);
-
+        List<String> res = new ArrayList<>();
+        if(query.length() >= 3){
+            Suggest suggest = new Suggest();
+            //DeleteIndex(Constants.AcIndexDir);
+            res = suggest.suggestTerms(query);
+        }
         return ResponseEntity.ok(res);
     }
 
