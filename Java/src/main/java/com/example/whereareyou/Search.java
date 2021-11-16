@@ -8,12 +8,11 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.queryparser.complexPhrase.ComplexPhraseQueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.http.ResponseEntity;
 
@@ -21,40 +20,41 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.Array;
 import java.sql.PreparedStatement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class Search {
-    public List<DblpRecord> SearchFile(String searchQuery, String field) throws Exception {
-        String[] field1 = {"title","author","month"};
+    public List<DblpRecord> SearchFile(String searchQuery, String field, boolean flag_fuzzy, boolean flag_proximity, int count) throws Exception {
+        //String[] field1 = {"title","author","month"};
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(Constants.IndexDir)));
         IndexSearcher searcher = new IndexSearcher(reader);
         Analyzer analyzer = new StandardAnalyzer();
         QueryParser parser = null;
-        String[] searchQSplit = searchQuery.split(" ");
-        if(searchQSplit.length == 1){
-            searchQuery = searchQuery + "~";
+        Query query = null;
+        TopDocs results = null;
+        List<DblpRecord> recordList = new ArrayList<>();
+
+        if(flag_fuzzy && !searchQuery.contains("~")){
+            searchQuery += "~";
+            Term term = new Term(field, searchQuery);
+            query = new FuzzyQuery(term);
         }
-        if(field.equals("")){
-            //parser = new ComplexPhraseQueryParser(field, analyzer);
-            parser = new MultiFieldQueryParser(field1, analyzer);
-        }
-        else{
+        else {
+            if(flag_proximity && !searchQuery.contains("~")){
+                searchQuery += "~4";
+            }
             parser = new ComplexPhraseQueryParser(field, analyzer);
+            query = parser.parse(searchQuery);
         }
-        Query query = parser.parse(searchQuery);
-        int count = 5;
-        TopDocs results = searcher.search(query,count);
-        List<DblpRecord> recordList = GetRecords(results, searcher);
+        results = searcher.search(query,1000);
+        Constants.TopHits += results.scoreDocs.length;
+        recordList.addAll(GetRecords(results,searcher,count));
         reader.close();
-        int totalHits = Integer.parseInt(Arrays.stream(results.totalHits.toString().split(" ")).toList().get(0));
         return recordList;
     }
-    private List<DblpRecord> GetRecords(TopDocs results, IndexSearcher searcher) throws IOException {
+
+    private List<DblpRecord> GetRecords(TopDocs results, IndexSearcher searcher, int count) throws IOException {
         List<DblpRecord> recordList = new ArrayList<DblpRecord>();
-        for(int i = 0; i < results.scoreDocs.length; i++){
+        for(int i = 0; i < count; i++){
             Document doc = searcher.doc(results.scoreDocs[i].doc);
             float score = results.scoreDocs[i].score;
             recordList.add(GetRecord(doc, score));
@@ -88,7 +88,8 @@ public class Search {
         String chapter= doc.get("chapter");
         String publnr= doc.get("publnr");
 
-        DblpRecord rec = new DblpRecord(docId, score, entry,
+        DblpRecord rec = new DblpRecord(docId,
+                score, entry,
                 title, authorList, year, school, publisher, number, pages, isbn, ee, month, series,
                 volume, noteList, bookTitle,crossRef, url, editor, cite, cdRom, address, chapter, publnr);
 

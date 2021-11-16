@@ -50,70 +50,69 @@ public class Suggest {
 
 
     public void AutoCompleteIndex() throws Exception {
-        String[] fieldsToAutocomplete = {"title","author"};
-        Directory dir = FSDirectory.open(Paths.get(Constants.AcIndexDir));
-        Analyzer analyzer1 = new StandardAnalyzer();
-        reader = DirectoryReader.open(FSDirectory.open(Paths.get(Constants.IndexDir)));
-
-        Analyzer analyzer = CustomAnalyzer.builder()
-                .withTokenizer("standard")
-                .addTokenFilter("lowercase")
-                .addTokenFilter("stop")
-                .addTokenFilter("porterstem")
-                .addTokenFilter("capitalization")
-                .build();
-
-        Analyzer analyzer2 = new Analyzer() {
-            @Override
-            protected TokenStreamComponents createComponents(String fieldName) {
-                Tokenizer source = new StandardTokenizer();
-                TokenStream stream = new LowerCaseFilter(source);
-                stream = new ASCIIFoldingFilter(stream);
-                stream = new NGramTokenFilter(stream,1,20,true);
-                return new TokenStreamComponents(source, stream);
-            }
-        };
-
-        IndexWriterConfig iwc = new IndexWriterConfig(analyzer2);
-        writer = new IndexWriter(dir, iwc);
+        try {
+            String[] fieldsToAutocomplete = {"title"};
+            Directory dir = FSDirectory.open(Paths.get(Constants.AcIndexDir));
+            reader = DirectoryReader.open(FSDirectory.open(Paths.get(Constants.IndexDir)));
 
 
-        Map<String, Integer> wordsMap = new HashMap<String, Integer>();
-        for(String fieldToAutocomplete : fieldsToAutocomplete){
-            LuceneDictionary dict = new LuceneDictionary(reader, fieldToAutocomplete);
-
-
-            InputIterator iter = dict.getEntryIterator();
-            while (iter.next() != null) {
-                String word = iter.next().utf8ToString();
-
-                int len = word.length();
-                if (len < 3) {
-                    continue; // too short we bail but "too long" is fine...
+            Analyzer analyzer2 = new Analyzer() {
+                @Override
+                protected TokenStreamComponents createComponents(String fieldName) {
+                    Tokenizer source = new StandardTokenizer();
+                    TokenStream stream = new LowerCaseFilter(source);
+                    stream = new ASCIIFoldingFilter(stream);
+                    stream = new NGramTokenFilter(stream,1,20,true);
+                    return new TokenStreamComponents(source, stream);
                 }
+            };
 
-                if (wordsMap.containsKey(word)) {
-                    throw new IllegalStateException(
-                            "This should never happen in Lucene 2.3.2");
-                    // wordsMap.put(word, wordsMap.get(word) + 1);
-                } else {
-                    // use the number of documents this word appears in
-                    wordsMap.put(word, reader.docFreq(new Term(
-                            fieldToAutocomplete, word)));
+            IndexWriterConfig iwc = new IndexWriterConfig(analyzer2);
+            writer = new IndexWriter(dir, iwc);
+
+
+            Map<String, Integer> wordsMap = new HashMap<String, Integer>();
+            for(String fieldToAutocomplete : fieldsToAutocomplete){
+                LuceneDictionary dict = new LuceneDictionary(reader, fieldToAutocomplete);
+
+
+                InputIterator iter = dict.getEntryIterator();
+                while (iter.next() != null) {
+                    String word = iter.next().utf8ToString();
+                    System.out.println(word);
+
+                    int len = word.length();
+                    if (len < 3) {
+                        continue; // too short we bail but "too long" is fine...
+                    }
+
+                    if (wordsMap.containsKey(word)) {
+                        throw new IllegalStateException(
+                                "This should never happen");
+                        // wordsMap.put(word, wordsMap.get(word) + 1);
+                    } else {
+                        // use the number of documents this word appears in
+                        wordsMap.put(word, reader.docFreq(new Term(
+                                fieldToAutocomplete, word)));
+                    }
                 }
             }
-        }
 
-        for (String word : wordsMap.keySet()) {
-            // ok index the word
-            Document doc = new Document();
-            doc.add(new TextField(SOURCE_WORD_FIELD, word, Field.Store.YES)); // orig term
-            doc.add(new TextField(GRAMMED_WORDS_FIELD, word, Field.Store.YES)); // grammed
-            doc.add(new SortedDocValuesField(COUNT_FIELD, new BytesRef(wordsMap.get(word)))); // count
-
-            writer.addDocument(doc);
+            for (String word : wordsMap.keySet()) {
+                // ok index the word
+                Document doc = new Document();
+                doc.add(new TextField(SOURCE_WORD_FIELD, word, Field.Store.YES)); // orig term
+                doc.add(new TextField(GRAMMED_WORDS_FIELD, word, Field.Store.YES)); // grammed
+                doc.add(new SortedDocValuesField(COUNT_FIELD, new BytesRef(wordsMap.get(word)))); // count
+                System.out.println(wordsMap.get(word)+ "-" + word);
+                writer.addDocument(doc);
+            }
+            writer.close();
         }
-        writer.close();
+        catch (Exception e){
+            System.out.println(e.getMessage());
+            writer.close();
+        }
     }
 
     public List<String> suggestTerms(String term) throws Exception {
