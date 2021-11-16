@@ -51,7 +51,7 @@ public class Suggest {
 
     public void AutoCompleteIndex() throws Exception {
         try {
-            String[] fieldsToAutocomplete = {"title","author"};
+            String[] fieldsToAutocomplete = {"title"};
             Directory dir = FSDirectory.open(Paths.get(Constants.AcIndexDir));
             reader = DirectoryReader.open(FSDirectory.open(Paths.get(Constants.IndexDir)));
 
@@ -79,6 +79,7 @@ public class Suggest {
                 InputIterator iter = dict.getEntryIterator();
                 while (iter.next() != null) {
                     String word = iter.next().utf8ToString();
+                    System.out.println(word);
 
                     int len = word.length();
                     if (len < 3) {
@@ -87,7 +88,7 @@ public class Suggest {
 
                     if (wordsMap.containsKey(word)) {
                         throw new IllegalStateException(
-                                "This should never happen in Lucene 2.3.2");
+                                "This should never happen");
                         // wordsMap.put(word, wordsMap.get(word) + 1);
                     } else {
                         // use the number of documents this word appears in
@@ -103,7 +104,7 @@ public class Suggest {
                 doc.add(new TextField(SOURCE_WORD_FIELD, word, Field.Store.YES)); // orig term
                 doc.add(new TextField(GRAMMED_WORDS_FIELD, word, Field.Store.YES)); // grammed
                 doc.add(new SortedDocValuesField(COUNT_FIELD, new BytesRef(wordsMap.get(word)))); // count
-
+                System.out.println(wordsMap.get(word)+ "-" + word);
                 writer.addDocument(doc);
             }
             writer.close();
@@ -119,7 +120,7 @@ public class Suggest {
         Query query = new TermQuery(new Term(GRAMMED_WORDS_FIELD, term));
         Sort sort = new Sort(SortField.FIELD_SCORE,new SortField(COUNT_FIELD, SortField.Type.STRING));
 
-        //AutoCompleteIndex();
+        AutoCompleteIndex();
 
         Directory dir = FSDirectory.open(Paths.get(Constants.AcIndexDir));
         IndexReader acreader = DirectoryReader.open(dir);
