@@ -46,7 +46,7 @@ public class Search {
             query = parser.parse(searchQuery);
         }
         results = searcher.search(query,1000);
-        Constants.TopHits += results.scoreDocs.length;
+        Constants.TopHits = results.scoreDocs.length;
         recordList.addAll(GetRecords(results,searcher,count));
         reader.close();
         return recordList;
