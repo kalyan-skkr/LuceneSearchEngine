@@ -3,11 +3,12 @@ package com.example.whereareyou.Model;
 import java.util.List;
 
 public class DblpRecordList {
-    public DblpRecordList(int totalHits, int count, List<DblpRecord> items, String msg_Vectors, String msg_Suggestions, String msg_Error) {
+    public DblpRecordList(int totalHits, int count, List<DblpRecord> items, List<Word2Vec> similarQueries, List<Doc2Vec> similarDocs, String msg_Suggestions, String msg_Error) {
         this.totalHits = totalHits;
         this.count = count;
         this.items = items;
-        this.msg_Vectors = msg_Vectors;
+        this.similarQueries = similarQueries;
+        this.similarDocuments = similarDocs;
         this.msg_Suggestions = msg_Suggestions;
         this.msg_Error = msg_Error;
     }
@@ -41,15 +42,25 @@ public class DblpRecordList {
         this.items = items;
     }
 
-    private String msg_Vectors;
+    private List<Word2Vec> similarQueries;
 
-    public String getMsg_Vectors() {
-        return msg_Vectors;
+    public List<Word2Vec> getSimilarQueries() {
+        return similarQueries;
     }
 
-    public void setMsg_Vectors(String msg_Vectors) {
-        this.msg_Vectors = msg_Vectors;
+    public void setSimilarQueries(List<Word2Vec> similarQueries) {
+        this.similarQueries = similarQueries;
     }
+    private List<Doc2Vec> similarDocuments;
+
+    public List<Doc2Vec> getSimilarDocuments() {
+        return similarDocuments;
+    }
+
+    public void setSimilarDocuments(List<Doc2Vec> similarDocuments) {
+        this.similarDocuments = similarDocuments;
+    }
+
     private String msg_Suggestions;
 
     public String getMsg_Suggestions() {
