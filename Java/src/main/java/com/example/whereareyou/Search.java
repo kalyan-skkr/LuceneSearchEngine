@@ -2,6 +2,8 @@ package com.example.whereareyou;
 
 import com.example.whereareyou.Constants.Constants;
 import com.example.whereareyou.Model.*;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -15,8 +17,11 @@ import org.apache.lucene.queryparser.complexPhrase.ComplexPhraseQueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.sql.Array;
 import java.sql.PreparedStatement;
@@ -52,7 +57,7 @@ public class Search {
         return recordList;
     }
 
-    private List<DblpRecord> GetRecords(TopDocs results, IndexSearcher searcher, int count) throws IOException {
+    private List<DblpRecord> GetRecords(TopDocs results, IndexSearcher searcher, int count) throws Exception {
         List<DblpRecord> recordList = new ArrayList<DblpRecord>();
         for(int i = 0; i < count; i++){
             Document doc = searcher.doc(results.scoreDocs[i].doc);
@@ -62,7 +67,7 @@ public class Search {
         return recordList;
     }
 
-    private DblpRecord GetRecord(Document doc, Float score){
+    private DblpRecord GetRecord(Document doc, Float score) throws Exception {
         int docId = Integer.parseInt(doc.get("docId"));
         Entry entry = new Entry(doc.get("entry"), doc.get("entry.mdate"),doc.get("entry.key"),doc.get("entry.publtype"), doc.get("entry.cdate"));
         Title title = (doc.get("title") != null) ? new Title(doc.get("title"), doc.get("title.bibTex")) : null;
@@ -87,11 +92,13 @@ public class Search {
         String address= doc.get("address");
         String chapter= doc.get("chapter");
         String publnr= doc.get("publnr");
+        PaperType paperType = getPaperType(title.getValue());
+
 
         DblpRecord rec = new DblpRecord(docId,
                 score, entry,
                 title, authorList, year, school, publisher, number, pages, isbn, ee, month, series,
-                volume, noteList, bookTitle,crossRef, url, editor, cite, cdRom, address, chapter, publnr);
+                volume, noteList, bookTitle,crossRef, url, editor, cite, cdRom, address, chapter, publnr, paperType);
 
         return rec;
     }
@@ -127,5 +134,16 @@ public class Search {
         }
 
         return noteList;
+    }
+    private PaperType getPaperType(String searchQuery) throws Exception {
+        int paperType = 0;
+        RestTemplate restTemplate = new RestTemplate();
+
+        ResponseEntity<String> call= restTemplate.getForEntity("http://127.0.0.1:5000/classify?query="+ URLEncoder.encode(searchQuery, StandardCharsets.UTF_8),String.class);
+        if(call.getStatusCodeValue() == 200){
+            paperType = Integer.parseInt(new Gson().fromJson(call.getBody(), String.class));
+        }
+        PaperType paperType_enum = paperType == 1 ? PaperType.Other : PaperType.SoftwareEngineering;
+        return paperType_enum;
     }
 }
