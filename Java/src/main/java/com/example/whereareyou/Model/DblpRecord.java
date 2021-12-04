@@ -16,7 +16,7 @@ public class DblpRecord {
                       String bookTitle, String crossRef,
                       Url url, Editor editor, Cite cite,
                       String cdRom, String address,
-                      String chapter, String publnr) {
+                      String chapter, String publnr, PaperType paperType) {
         this.id = id;
         this.score = score;
         this.entry = entry;
@@ -42,6 +42,7 @@ public class DblpRecord {
         this.address = address;
         this.chapter = chapter;
         this.publnr = publnr;
+        this.paperType = paperType;
     }
 
     private int id;
@@ -272,5 +273,15 @@ public class DblpRecord {
 
     public void setPublnr(String publnr) {
         this.publnr = publnr;
+    }
+
+    private PaperType paperType;
+
+    public PaperType getPaperType() {
+        return paperType;
+    }
+
+    public void setPaperType(PaperType paperType) {
+        this.paperType = paperType;
     }
 }
