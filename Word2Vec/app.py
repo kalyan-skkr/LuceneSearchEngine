@@ -20,6 +20,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from fast_autocomplete import AutoComplete
 
 app = Flask(__name__)
 
@@ -86,89 +87,6 @@ def savemodel(filename, model):
     fname = get_tmpfile(filename)
     model.save(fname)
 
-d2v = True
-w2v = True
-
-if d2v:
-    d2v_trainCorpus = gettraincorpus(flag_new=False, flag_d2v=True)
-    d2v_model = fetch_doc2vec_model()
-
-if w2v:
-    w2v_model = fetch_word2vec_model()
-
-
-class Words:
-    def __init__(self, key, score):
-        self.key = key
-        self.score = score
-
-
-class Docs:
-    def __init__(self, key, score):
-        self.key = key
-        self.score = score
-
-
-@app.route('/word2vec', methods=['GET'])
-def word2vec():
-    try:
-        # create_word2vec_model()
-        # word2vec = fetch_word2vec_model()
-        word2vec = w2v_model
-
-        if 'query' in request.args:
-            query = request.args['query']
-        else:
-            return jsonify([])
-
-        queryList = query.lower().split()
-        v1 = word2vec.wv.most_similar(positive=queryList, topn=10)
-
-        similarWords = []
-
-        for x in v1:
-            if x[0] not in queryList:
-                word = Words(x[0], x[1])
-                similarWords.append(word)
-        return jsonpickle.encode(similarWords)
-    except Exception as e:
-        return jsonify([])
-
-
-@app.route('/doc2vec', methods=['GET'])
-def doc2vec():
-    try:
-        # create_doc2vec_model()
-        # doc2vec = fetch_doc2vec_model()
-        doc2vec = d2v_model
-
-        if 'query' in request.args:
-            query = request.args['query']
-        else:
-            return jsonify([])
-
-        # train_corpus = gettraincorpus(newFlag=False)
-        train_corpus = d2v_trainCorpus
-
-        query_token = query.lower().split()
-        inferred_vector = doc2vec.infer_vector(query_token)
-        sims = doc2vec.dv.most_similar([inferred_vector], topn=20)
-        documents = []
-        count = 0
-        for i in range(len(sims)):
-            if count == 5:
-                break
-            idx, cos_sim = sims[i]
-            if idx <= len(train_corpus) - 1:
-                doc_title = " ".join(train_corpus[idx].words)
-                if doc_title != query.lower():
-                    doc = Docs(doc_title, cos_sim)
-                    documents.append(doc)
-                    count += 1
-        return jsonpickle.encode(documents)
-    except Exception as e:
-        return jsonify([])
-
 
 def gettraindata():
     train_pos = open('/Users/kalyansabbella/Documents/Test/NB Classfier/vldb_train.txt', 'r').readlines()
@@ -204,6 +122,107 @@ def fetch_classifier_model():
     return model, vectorizer
 
 
+def create_autocomplete_model():
+    # with open('/Users/kalyansabbella/Documents/Test/words_dblp.txt', 'r') as f:
+    with open('/Users/kalyansabbella/Documents/Test/words_alpha.txt', 'r') as f:
+        words = f.readlines()
+    words_dict = {word : {} for word in words}
+    autocomplete = AutoComplete(words=words_dict)
+    return autocomplete
+
+
+d2v_glob = False
+w2v_glob = False
+nbclassifier_glob = False
+autocomplete_glob = True
+
+if d2v_glob:
+    d2v_trainCorpus_glob = gettraincorpus(flag_new=False, flag_d2v=True)
+    d2v_model_glob = fetch_doc2vec_model()
+
+if w2v_glob:
+    w2v_model_glob = fetch_word2vec_model()
+
+if nbclassifier_glob:
+    nbmodel_glob, nbvectorizer_glob = fetch_classifier_model()
+
+if autocomplete_glob:
+    autcomplete_model_glob = create_autocomplete_model()
+
+
+class Words:
+    def __init__(self, key, score):
+        self.key = key
+        self.score = score
+
+
+class Docs:
+    def __init__(self, key, score):
+        self.key = key
+        self.score = score
+
+
+@app.route('/word2vec', methods=['GET'])
+def word2vec():
+    try:
+        # create_word2vec_model()
+        # word2vec = fetch_word2vec_model()
+        word2vec = w2v_model_glob
+
+        if 'query' in request.args:
+            query = request.args['query']
+        else:
+            return jsonify([])
+
+        queryList = query.lower().split()
+        v1 = word2vec.wv.most_similar(positive=queryList, topn=10)
+
+        similarWords = []
+
+        for x in v1:
+            if x[0] not in queryList:
+                word = Words(x[0], x[1])
+                similarWords.append(word)
+        return jsonpickle.encode(similarWords)
+    except Exception as e:
+        return jsonify([])
+
+
+@app.route('/doc2vec', methods=['GET'])
+def doc2vec():
+    try:
+        # create_doc2vec_model()
+        # doc2vec = fetch_doc2vec_model()
+        doc2vec = d2v_model_glob
+
+        if 'query' in request.args:
+            query = request.args['query']
+        else:
+            return jsonify([])
+
+        # train_corpus = gettraincorpus(newFlag=False)
+        train_corpus = d2v_trainCorpus_glob
+
+        query_token = query.lower().split()
+        inferred_vector = doc2vec.infer_vector(query_token)
+        sims = doc2vec.dv.most_similar([inferred_vector], topn=20)
+        documents = []
+        count = 0
+        for i in range(len(sims)):
+            if count == 5:
+                break
+            idx, cos_sim = sims[i]
+            if idx <= len(train_corpus) - 1:
+                doc_title = " ".join(train_corpus[idx].words)
+                if doc_title != query.lower():
+                    doc = Docs(doc_title, cos_sim)
+                    documents.append(doc)
+                    count += 1
+        return jsonpickle.encode(documents)
+    except Exception as e:
+        return jsonify([])
+
+
 @app.route('/classify', methods=['POST', 'GET'])
 def classify():
     if request.method == 'GET':
@@ -217,13 +236,34 @@ def classify():
         queryList = request.get_json()['query']
 
     # create_classifier_model()
-    model, vectorizer = fetch_classifier_model()
+    # model, vectorizer = fetch_classifier_model()
+    model = nbmodel_glob
+    vectorizer = nbvectorizer_glob
 
     query_vector = vectorizer.transform(queryList).toarray()
 
     prediction = model.predict(query_vector)
 
     return jsonpickle.encode(int(prediction[0]))
+
+
+@app.route('/autocomplete', methods=['GET'])
+def autocomplete():
+    if 'query' in request.args:
+        query = request.args['query']
+    else:
+        return jsonify([])
+    final_suggestions = []
+    try:
+        autocomplete = autcomplete_model_glob
+        suggestions = autocomplete.search(word=query, max_cost=10, size=10)
+        for suggest in suggestions[1:]:
+            for s in suggest:
+                if s != query+'\n' and s not in final_suggestions:
+                    final_suggestions.append(s[:len(s)-1])
+    except Exception as e:
+        return jsonify([])
+    return jsonpickle.encode(final_suggestions)
 
 
 if __name__ == '__main__':
