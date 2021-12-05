@@ -2,8 +2,6 @@ package com.example.whereareyou;
 
 import com.example.whereareyou.Constants.Constants;
 import com.example.whereareyou.Model.*;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.search.spell.*;
@@ -16,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,10 +28,11 @@ public class WhereAreYouApplication {
 
     public static void main(String[] args) throws IOException {
         SpringApplication.run(WhereAreYouApplication.class, args);
-        checker = setChecker();
+        checker = createAndSetSpellIndex();
+//        checker = setSpellIndex();
     }
 
-    private static SpellChecker setChecker() throws IOException {
+    private static SpellChecker createAndSetSpellIndex() throws IOException {
         Directory directory = FSDirectory.open(Paths.get(Constants.spellIndexDir));
         PlainTextDictionary txt_dict = new PlainTextDictionary(Paths.get(Constants.dictionaryFile));
         SpellChecker checker = new SpellChecker(directory);
@@ -43,10 +41,17 @@ public class WhereAreYouApplication {
         directory.close();
 
         //checker.setStringDistance(new JaroWinklerDistance());
-        //checker.setStringDistance(new LevenshteinDistance());
+//        checker.setStringDistance(new LevenshteinDistance());
         //checker.setStringDistance(new LuceneLevenshteinDistance());
         checker.setStringDistance(new NGramDistance());
 
+        return checker;
+    }
+
+    private static SpellChecker setSpellIndex() throws IOException {
+        Directory directory = FSDirectory.open(Paths.get(Constants.spellIndexDir));
+        SpellChecker checker = new SpellChecker(directory);
+        checker.setSpellIndex(directory);
         return checker;
     }
 
@@ -73,14 +78,21 @@ public class WhereAreYouApplication {
         }
 
         List<String> spellCheckList = new ArrayList<>();
+        String correctSpelling = "";
         boolean spellCorrection = false;
-        if(terms.length == 1){
-            spellCheckList = SpellChecker(searchQuery);
-            if(!spellCheckList.contains(searchQuery.toLowerCase())){
-                spellCorrection = true;
-                spellCheckList = SpellChecker(searchQuery + "/");
-                searchQuery += "~";
+        for(int i =0; i<terms.length;i++){
+            boolean correct = true;
+            spellCheckList = SpellChecker(terms[i]);
+            if(spellCheckList.size() > 0 && !spellCheckList.contains(terms[i].toLowerCase())){
+                spellCheckList = SpellChecker(terms[i] + "/");
+                correct = false;
             }
+            terms[i] = correct ? terms[i] : spellCheckList.get(0);
+        }
+        correctSpelling = String.join(" ", terms);
+        if(!correctSpelling.equalsIgnoreCase(searchQuery)){
+            searchQuery = correctSpelling;
+            spellCorrection = true;
         }
 
         Index i = new Index();
@@ -89,43 +101,20 @@ public class WhereAreYouApplication {
 
         Search s = new Search();
         List<DblpRecord> records = s.SearchFile(searchQuery, field, flag_fuzzy, flag_proximity, count);
-        List<Word2Vec> word2Vecs = expandQuery(searchQuery);
-        List<Doc2Vec> doc2Vecs = similarDocuments(searchQuery);
+        List<Word2Vec> word2Vecs = HttpHelper.expandQuery(searchQuery);
+        List<Doc2Vec> doc2Vecs = HttpHelper.similarDocuments(searchQuery);
 
         records = RemoveDuplicates(records);
 
         if(records.size() <= 0){
-            return ResponseEntity.ok().body(new DblpRecordList(0,0,null,null,null,spellCorrection ? "Did you mean: " + String.join(" / ", spellCheckList) : "",  "No Records Found"));
+            return ResponseEntity.ok().body(new DblpRecordList(0,0,null,null,null,spellCorrection ? "Did you mean: " + correctSpelling  + "</i>?" : "",  "No Records Found"));
         }
 
-        DblpRecordList resultSet = new DblpRecordList(Constants.TopHits, records.size(), records, word2Vecs,doc2Vecs, spellCorrection ? "Did you mean: " + String.join(" / ", spellCheckList) : "","");
+        DblpRecordList resultSet = new DblpRecordList(Constants.TopHits, records.size(), records, word2Vecs,doc2Vecs, spellCorrection ? "Did you mean: <i>" + correctSpelling + "</i>?" : "","");
 
         return ResponseEntity.ok(resultSet);
     }
-    private List<Word2Vec> expandQuery(String searchQuery) throws Exception {
-        RestTemplate restTemplate = new RestTemplate();
-        Search s = new Search();
-        List<Word2Vec> word2Vecs = new ArrayList<>();
 
-        ResponseEntity<String> call= restTemplate.getForEntity("http://127.0.0.1:5000/word2vec?query="+searchQuery,String.class);
-        if(call.getStatusCodeValue() == 200){
-            word2Vecs = new Gson().fromJson(call.getBody(), new TypeToken<List<Word2Vec>>(){}.getType());
-
-        }
-        return word2Vecs;
-    }
-    private List<Doc2Vec> similarDocuments(String searchQuery) throws Exception {
-        RestTemplate restTemplate = new RestTemplate();
-        Search s = new Search();
-        List<Doc2Vec> doc2Vecs = new ArrayList<>();
-
-        ResponseEntity<String> call= restTemplate.getForEntity("http://127.0.0.1:5000/doc2vec?query="+searchQuery,String.class);
-        if(call.getStatusCodeValue() == 200){
-            doc2Vecs = new Gson().fromJson(call.getBody(), new TypeToken<List<Doc2Vec>>(){}.getType());
-
-        }
-        return doc2Vecs;
-    }
     private void DeleteIndex(String dirPath){
         File dir = new File(dirPath);
         String[] files = dir.list();
@@ -136,7 +125,7 @@ public class WhereAreYouApplication {
     }
     private List<String> SpellChecker(String searchQuery) throws IOException {
         String input_word = searchQuery.substring(0,searchQuery.length()-1);
-        String[] checkedWords = checker.suggestSimilar(input_word, 10);
+        String[] checkedWords = checker.suggestSimilar(input_word, 100);
         List<String> checkList = new ArrayList<String>(Arrays.asList(checkedWords));
         return checkList;
     }
@@ -152,13 +141,8 @@ public class WhereAreYouApplication {
 
     @GetMapping("/suggest")
     public ResponseEntity<List<String>> Suggest(@RequestParam(name="query") String query) throws Exception {
-        List<String> res = new ArrayList<>();
-        if(query.length() >= 3){
-            Suggest suggest = new Suggest();
-            DeleteIndex(Constants.AcIndexDir);
-            res = suggest.suggestTerms(query);
-        }
-        return ResponseEntity.ok(res);
+        List<String> suggestions = HttpHelper.getAutoCompleteSuggestions(query);
+        return ResponseEntity.ok(suggestions);
     }
 
 

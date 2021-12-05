@@ -5,7 +5,6 @@ import java.util.List;
 
 public class Constants {
     //public static final String IndexDir  = "/Users/kalyansabbella/Documents/Test/TestIndex";
-    public static final String AcIndexDir  = "/Users/kalyansabbella/Documents/Test/AcIndex";
     public static final String IndexDir  = "/Users/kalyansabbella/Documents/UoW/Term 1/IR/Project/Index";
     public static final String DblpDir = "/Users/kalyansabbella/Documents/Test/Doc";
     //public static final String DblpFile = "/Users/kalyansabbella/Documents/Test/Doc/dblp.xml";

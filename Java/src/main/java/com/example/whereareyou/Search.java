@@ -4,6 +4,7 @@ import com.example.whereareyou.Constants.Constants;
 import com.example.whereareyou.Model.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.apache.coyote.Response;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -29,7 +30,6 @@ import java.util.*;
 
 public class Search {
     public List<DblpRecord> SearchFile(String searchQuery, String field, boolean flag_fuzzy, boolean flag_proximity, int count) throws Exception {
-        //String[] field1 = {"title","author","month"};
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(Constants.IndexDir)));
         IndexSearcher searcher = new IndexSearcher(reader);
         Analyzer analyzer = new StandardAnalyzer();
@@ -50,16 +50,16 @@ public class Search {
             parser = new ComplexPhraseQueryParser(field, analyzer);
             query = parser.parse(searchQuery);
         }
-        results = searcher.search(query,1000);
-        Constants.TopHits = results.scoreDocs.length;
-        recordList.addAll(GetRecords(results,searcher,count));
+        results = searcher.search(query,count);
+        Constants.TopHits = searcher.count(query);
+        recordList.addAll(GetRecords(results,searcher));
         reader.close();
         return recordList;
     }
 
-    private List<DblpRecord> GetRecords(TopDocs results, IndexSearcher searcher, int count) throws Exception {
+    private List<DblpRecord> GetRecords(TopDocs results, IndexSearcher searcher) throws Exception {
         List<DblpRecord> recordList = new ArrayList<DblpRecord>();
-        for(int i = 0; i < count; i++){
+        for(int i = 0; i < results.scoreDocs.length; i++){
             Document doc = searcher.doc(results.scoreDocs[i].doc);
             float score = results.scoreDocs[i].score;
             recordList.add(GetRecord(doc, score));
@@ -92,7 +92,7 @@ public class Search {
         String address= doc.get("address");
         String chapter= doc.get("chapter");
         String publnr= doc.get("publnr");
-        PaperType paperType = getPaperType(title.getValue());
+        PaperType paperType = HttpHelper.getPaperType(title.getValue());
 
 
         DblpRecord rec = new DblpRecord(docId,
@@ -134,16 +134,5 @@ public class Search {
         }
 
         return noteList;
-    }
-    private PaperType getPaperType(String searchQuery) throws Exception {
-        int paperType = 0;
-        RestTemplate restTemplate = new RestTemplate();
-
-        ResponseEntity<String> call= restTemplate.getForEntity("http://127.0.0.1:5000/classify?query="+ URLEncoder.encode(searchQuery, StandardCharsets.UTF_8),String.class);
-        if(call.getStatusCodeValue() == 200){
-            paperType = Integer.parseInt(new Gson().fromJson(call.getBody(), String.class));
-        }
-        PaperType paperType_enum = paperType == 1 ? PaperType.Other : PaperType.SoftwareEngineering;
-        return paperType_enum;
     }
 }
