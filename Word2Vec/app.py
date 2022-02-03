@@ -3,6 +3,7 @@ import random
 import re
 
 import jsonpickle
+import numpy
 from flask import Flask, request, jsonify
 import nltk
 from nltk.corpus import words
@@ -89,28 +90,34 @@ def savemodel(filename, model):
 
 
 def gettraindata():
-    train_pos = open('/Users/kalyansabbella/Documents/Test/NB Classfier/vldb_train.txt', 'r').readlines()
-    train_neg = open('/Users/kalyansabbella/Documents/Test/NB Classfier/icse_train.txt', 'r').readlines()
-    test_pos = open('/Users/kalyansabbella/Documents/Test/NB Classfier/vldb_test.txt', 'r').readlines()
-    test_neg = open('/Users/kalyansabbella/Documents/Test/NB Classfier/icse_test.txt', 'r').readlines()
+    vldb1 = open('/Users/kalyansabbella/Documents/Test/NB Classfier/vldb_train.txt', 'r').readlines()
+    icse1 = open('/Users/kalyansabbella/Documents/Test/NB Classfier/icse_train.txt', 'r').readlines()
+    vldb2 = open('/Users/kalyansabbella/Documents/Test/NB Classfier/vldb_test.txt', 'r').readlines()
+    icse2 = open('/Users/kalyansabbella/Documents/Test/NB Classfier/icse_test.txt', 'r').readlines()
+    sigmod = open('/Users/kalyansabbella/Documents/Test/NB Classfier/sigmod.txt', 'r').readlines()
 
-    train_pos += test_pos
-    train_neg += test_neg
-    train_neg = random.choices(train_neg, k=len(train_pos))
+    vldb1 += vldb2
+    icse1 += icse2
 
-    return train_pos, train_neg
+    if(len(vldb1) < len(sigmod)):
+        icse1 = random.choices(icse1, k=len(sigmod))
+        sigmod = random.choices(sigmod, k=len(sigmod))
+    else:
+        icse1 = random.choices(icse1, k=len(vldb1))
+        vldb1 = random.choices(vldb1, k=len(vldb1))
+
+
+    return vldb1, icse1, sigmod
 
 
 def create_classifier_model():
-    train_pos, train_neg = gettraindata()
+    vldb, icse, sigmod = gettraindata()
     vectorizer = CountVectorizer()
-    X = vectorizer.fit_transform(train_pos + train_neg).toarray()
-    y = [1] * len(train_pos) + [0] * len(train_neg)
+    X = vectorizer.fit_transform(vldb + icse + sigmod).toarray()
+    y = [1] * len(vldb) + [0] * len(icse) + [2] * len(sigmod)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
-
-    logreg = LogisticRegression(solver='lbfgs')
-    logreg.fit(X_train, y_train)
+    logreg = LogisticRegression(solver='saga')
+    logreg.fit(numpy.array(X), numpy.array(y))
 
     pickle.dump(logreg, open('/Users/kalyansabbella/Documents/UoW/Term 1/IR/Project/Resources/Models/NbClassifier/classifier.pkl', 'wb'))
     pickle.dump(vectorizer, open('/Users/kalyansabbella/Documents/UoW/Term 1/IR/Project/Resources/Models/NbClassifier/vectorizer.pkl', 'wb'))
@@ -131,9 +138,9 @@ def create_autocomplete_model():
     return autocomplete
 
 
-d2v_glob = False
-w2v_glob = False
-nbclassifier_glob = False
+d2v_glob = True
+w2v_glob = True
+nbclassifier_glob = True
 autocomplete_glob = True
 
 if d2v_glob:
