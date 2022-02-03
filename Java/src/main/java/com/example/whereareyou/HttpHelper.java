@@ -59,7 +59,17 @@ public class HttpHelper {
         catch (Exception e){
             return PaperType.Other;
         }
-        PaperType paperType_enum = paperType == 1 ? PaperType.Other : PaperType.SoftwareEngineering;
+        PaperType paperType_enum;
+        switch (paperType){
+            case 0 : paperType_enum = PaperType.ICSE;
+            break;
+            case 1 : paperType_enum = PaperType.VLDB;
+            break;
+            case 2 : paperType_enum = PaperType.SIGMOD;
+            break;
+            default : paperType_enum = PaperType.Other;
+            break;
+        }
         return paperType_enum;
     }
     public static List<String> getAutoCompleteSuggestions(String searchQuery) throws Exception {
